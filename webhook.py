@@ -1,11 +1,22 @@
+import os
 import requests
+import openai
 from flask import Flask, request
+from dotenv import load_dotenv
 
+# تحميل المتغيرات من .env
+load_dotenv()
+
+# إعداد Flask
 app = Flask(__name__)
 
-VERIFY_TOKEN = "sido009"
-PAGE_ACCESS_TOKEN = "EAAKYtAyYyoABPAlevKlXyk8Jsk4ZB3gqH8L8f0Yv4jx9r5uuPhyFYkc1NliUJ1DnAQ2acUw7l7INR6oLcApr1Q0WHJ8G71we4fkesENbsOqJbzuRK2NB5SdWmAztLV9Ad2DXO2PFDxHOtNYO3Sj9X3oDK0HCAVJlpRU1ZA7AI3zh6aZCZCfBV1INWaY32qJeodjbJYlqiAZDZD"  # حط توكن صفحتك هنا
+VERIFY_TOKEN = os.getenv("sido009")
+PAGE_ACCESS_TOKEN = os.getenv("EAAKYtAyYyoABPOKS6oE0OAOYMCjN7PbhrPl48MrgVMTdRZAIcppKorwyDrVOQKJ8sxKcQCCOD7xDMjIfLvHmiSfXOZACpLTRTOTPavU0nqMATAc0FYSVolv3vFWhP870jF6ZBHvLpKOJarTqiQz1t1q3BPMv1kj1bsfrIVcIOVPR5wMtCgYS33yfZBkfI65StAwkKYFQwgZDZD")
+OPENAI_API_KEY = os.getenv("EAAKYtAyYyoABPOKS6oE0OAOYMCjN7PbhrPl48MrgVMTdRZAIcppKorwyDrVOQKJ8sxKcQCCOD7xDMjIfLvHmiSfXOZACpLTRTOTPavU0nqMATAc0FYSVolv3vFWhP870jF6ZBHvLpKOJarTqiQz1t1q3BPMv1kj1bsfrIVcIOVPR5wMtCgYS33yfZBkfI65StAwkKYFQwgZDZD")
 
+openai.api_key = OPENAI_API_KEY
+
+# الرد على التحقق من Facebook
 @app.route("/webhook", methods=["GET", "POST"])
 def webhook():
     if request.method == "GET":
@@ -20,18 +31,22 @@ def webhook():
 
     if request.method == "POST":
         data = request.get_json()
-        print("🔔 Received message:", data)
+        print("🔔 Received:", data)
 
         if "entry" in data:
             for entry in data["entry"]:
                 if "messaging" in entry:
                     for message_event in entry["messaging"]:
                         sender_id = message_event["sender"]["id"]
-                        if "message" in message_event:
-                            send_message(sender_id, "مرحباً! أنا بوت تجريبي 😄")
+                        if "message" in message_event and "text" in message_event["message"]:
+                            user_message = message_event["message"]["text"]
+                            response = get_openai_response(user_message)
+                            send_message(sender_id, response)
 
         return "EVENT_RECEIVED", 200
 
+
+# إرسال رسالة عبر Facebook
 def send_message(recipient_id, text):
     url = f"https://graph.facebook.com/v18.0/me/messages?access_token={PAGE_ACCESS_TOKEN}"
     headers = {"Content-Type": "application/json"}
@@ -41,8 +56,29 @@ def send_message(recipient_id, text):
     }
 
     response = requests.post(url, headers=headers, json=payload)
-    print("📨 Sent message response:", response.json())
+    print("📨 Sent message:", response.json())
 
+
+# الرد من OpenAI
+def get_openai_response(message):
+    try:
+        completion = openai.ChatCompletion.create(
+            model="gpt-3.5-turbo",  # أو "gpt-4" لو عندك
+            messages=[
+                {"role": "system", "content": "أنت مساعد ذكي يتكلم بالعربية."},
+                {"role": "user", "content": message}
+            ]
+        )
+        return completion.choices[0].message["content"]
+    except Exception as e:
+        print("❌ OpenAI Error:", str(e))
+        return "حدث خطأ أثناء الاتصال بـ ChatGPT."
+
+
+# تشغيل السيرفر
 if __name__ == "__main__":
-    app.run(host="0.0.0.0", port=10000)
+    port = int(os.environ.get("PORT", 10000))
+    app.run(host="0.0.0.0", port=port)
+
+
 
