@@ -2,7 +2,11 @@ services:
   - type: web
     name: messenger-bot
     env: python
+    branch: main
     buildCommand: ""
     startCommand: python webhook.py
     plan: free
-    autoDeploy: true
+    envVars:
+      - key: PORT
+        value: 10000
+
