@@ -79,6 +79,22 @@ def get_openai_response(message):
 if __name__ == "__main__":
     port = int(os.environ.get("PORT", 10000))
     app.run(host="0.0.0.0", port=port)
+    def get_openai_response(message):
+    try:
+        completion = openai.ChatCompletion.create(
+            model="gpt-3.5-turbo",
+            messages=[
+                {"role": "system", "content": "أنت مساعد ذكي يتكلم بالعربية."},
+                {"role": "user", "content": message}
+            ]
+        )
+        return completion.choices[0].message["content"]
+    except Exception as e:
+        print("❌ OpenAI Error:", str(e))  # هذا موجود
+        import traceback
+        traceback.print_exc()  # نضيف هذا باش نشوف التفاصيل
+        return "حدث خطأ أثناء الاتصال بـ ChatGPT."
+
 
 
 
